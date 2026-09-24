@@ -1,0 +1,16 @@
+# 编译产物
+build/
+obj/
+*.o
+*.d
+*.elf
+*.map
+*.lst
+*.su
+
+# Python
+__pycache__/
+*.pyc
+
+# 每台机器自己的配置（串口号 / IDF 路径），不进库
+local.env.ps1

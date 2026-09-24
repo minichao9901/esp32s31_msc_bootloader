@@ -1,0 +1,9 @@
+接下来玩一个新的项目。我让然你用s31做一个基于cherryusb msc的bootloader，支持拖拽bin文件烧录。要裸机的。
+1）裸机cherryusb cdc有一个esp32p4的例程你可以参考，p4与s31我预计几乎没啥差别。usb-hs应该是同一个ip。
+E:\esp-idf-wsh\projects\baremetal_cdc
+2）基于msc的bootloader bin拖拽，有一个参考项目，你可以借用
+E:\Share\github\stm32f103_cherryusb_drag_n_drop_iap\cherry_drag_n_drop_bootloader_fat16
+3) 我希望支持的App.bin，它的LMA在Flash中，VMA在psram中。具体的地址你可以自己定。
+4) 复位的时候，通过按键决定是进入bootloader模式，还是进入应用模式。如果应用地址没有程序，那么检测失败，还是停留在bootloader模式。
+
+如有不清楚的，可以跟我沟通。
