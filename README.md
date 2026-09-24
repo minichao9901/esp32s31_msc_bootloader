@@ -47,6 +47,14 @@
 
 ## 2. 硬件与接线
 
+![ESP32-S31-Function-CoreBoard-1 正面](docs/img/board-front.png)
+
+> 板子正面（图：乐鑫官方《ESP32-S31 DevKits User Guide》Fig.2，仅作接线说明用）。
+> 本工程只用到图里这几处：**(1) J2 排针** —— GPIO0 就是 J2 第 9 脚；
+> **(4) USB 2.0 Type-A** = 拖拽盘走的 USB-HS 口；
+> **(5) USB Serial/JTAG** = USB-DBG 口（日志 + 烧录）；
+> **(12) RGB LED** 就是本工程的心跳灯。其余接口（网口/音频/咪头）没有用到。
+
 | 板上丝印 | 类型 | 作用 | 必须插吗 |
 |---|---|---|---|
 | **USB-HS** | Type-A | 拖拽盘（S31 的 USB 2.0 OTG-HS **当设备**）| **要**，否则电脑上看不到盘 |
@@ -87,6 +95,13 @@ pwsh -File s31_app\tools\build.ps1 -Drag       # 编译 + 拷进 S31-BOOT 盘
 1. 按住 GPIO0 复位 → 资源管理器里出现 `S31-BOOT` 盘（本机是 `Z:`，8 MB）；
 2. 把 `app.bin` 拖进去；
 3. **停手别碰盘**，等 1.5 秒 —— 板子自己复位进 App。
+
+bootloader 模式下"此电脑"里长这样：
+
+![S31-BOOT 盘](docs/img/s31-boot-drive.png)
+
+> 卷标 `S31-BOOT`、**8 MB** —— 这块盘映射的就是 flash 里 `0x100000` 起的 8 MB App 装载区。
+> 盘符每次插拔都可能变（本机是 `Z:`），所以脚本一律按**卷标**找盘，不记盘符。
 
 > 端口默认取 `ESP32_S31_PORT` 环境变量（没有就用 `COM43`）：
 > `make monitor PORT=COM7` 或先 `$env:ESP32_S31_PORT='COM7'`。
@@ -305,6 +320,7 @@ PSRAM 初始化、MMU 映射、CLIC 中断、USB-Serial/JTAG 控制台 —— **
 esp32s31_msc_bootloader/
 ├── README.md                  ← 你正在看的
 ├── LICENSE                    Apache-2.0
+├── docs/img/                  README 里的图（板卡接口图 + S31-BOOT 盘截图）
 ├── boot_msc_s31/              裸机 bootloader
 │   ├── README.md              设计 / 布局 / 上手 / 踩坑（先读这个）
 │   ├── PSRAM.md               ★ PSRAM 专章：742 行，含"已排除、别重查"的方向
