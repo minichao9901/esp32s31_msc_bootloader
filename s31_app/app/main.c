@@ -81,6 +81,13 @@ static void led_set(uint8_t r, uint8_t g, uint8_t b)
     }
 }
 
+/* ---- 串口心跳 ----
+ * 开机那屏是**一次性**的，而它正好落在"跳转/复位让 USB-Serial/JTAG 重新枚举"
+ * 的窗口里 —— 串口助手很容易整屏错过，错过之后就再也看不到任何输出，
+ * 看起来就像"跳到 App 就死了"。所以主循环里留一行低频心跳。
+ * 想彻底安静：把这里改成 0（开机只打一屏，靠板载 LED 看心跳）。 */
+#define HEARTBEAT_MS    5000u
+
 /* 经典模型的全部判据，一次判完 */
 static int layout_ok(void)
 {
@@ -109,19 +116,33 @@ void app_main(void)
                 ? "OK —— LMA 在 flash、VMA 在 PSRAM，初值搬运与 .bss 清零都对"
                 : "FAIL —— 段搬运不对，别往下走了");
     kprintf("[app] LED: RMT -> WS2812 (GPIO60)，红/绿/蓝 1 秒轮换\r\n");
+#if HEARTBEAT_MS
+    kprintf("[app] 串口心跳: 每 %u 秒一行 alive（改 HEARTBEAT_MS 可关）\r\n",
+            (unsigned)(HEARTBEAT_MS / 1000u));
+#else
+    kprintf("[app] 串口心跳已关 —— 开机只打这一屏，之后看 LED\r\n");
+#endif
     kprintf("================================================\r\n");
 
     s31_rmt_init();         /* RMT + GPIO60 路由（WS2812 全靠硬件时序）*/
     led_set(0, 0, 0);       /* 先灭灯 */
 
-    /* 主循环：LED 就是心跳，串口不再输出。
+    /* 主循环：LED 轮换 + 低频串口心跳。
        （要加打印的话，记得每轮调一次 s31_usj_pump() 把 FIFO 推出去。）*/
     for (;;) {
-        switch (s_counter++ % 3u) {
+        uint32_t t = ++s_counter;              /* 秒计数（顺便当 LED 相位）*/
+
+        switch (t % 3u) {
         case 0:  led_set(32, 0, 0);  break;    /* 亮度 32/255：满亮度太刺眼 */
         case 1:  led_set(0, 32, 0);  break;
         default: led_set(0, 0, 32);  break;
         }
+
+#if HEARTBEAT_MS
+        if ((t % (HEARTBEAT_MS / 1000u)) == 0u) {
+            kprintf("[app] alive %u s\r\n", (unsigned)t);
+        }
+#endif
 
         s31_delay_ms(1000);
         s31_usj_pump();

@@ -6,7 +6,7 @@
 ## 快速上手
 
 ```powershell
-cd s31_app
+cd E:\esp-idf-s31\projects\s31_app
 make help          # 目标一览
 make build         # 编译 -> build\app.bin + build\app_container.bin（**两个都产**）
 make flash         # ★ 全自动：擦描述符 -> 等 S31-BOOT 盘 -> 编译 -> 拷进去
@@ -18,7 +18,8 @@ make erase         # 擦掉 App 描述符 -> 板子回到 bootloader 模式
 
 > `make` 只是薄封装，真正干活的是 `tools\build.ps1`（编译+打包）和
 > `tools\make.ps1`（找盘/等盘/擦除/读串口）。不想用 make 就直接调它们。
-> 端口取环境变量 `ESP32_S31_PORT`（没设就用 `COM43`；也可以临时 `make monitor PORT=COM7`）。
+> 端口默认取工作区根的 `local.env.ps1` 里的 `ESP32_S31_PORT`（本机 COM43），
+> 临时换：`make monitor PORT=COM7`。
 
 ### 两个镜像，都能拖（`make build` 一次产两个）
 
@@ -134,10 +135,20 @@ MEMORY {
 [app] .data  VMA 50800000 <- LMA 40101258   [startup 从 flash 搬]
 [app] 布局自检: OK —— LMA 在 flash、VMA 在 PSRAM，初值搬运与 .bss 清零都对
 [app] LED: RMT -> WS2812 (GPIO60)，红/绿/蓝 1 秒轮换
+[app] 串口心跳: 每 5 秒一行 alive（改 HEARTBEAT_MS 可关）
 ================================================
+[app] alive 5 s
+[app] alive 10 s
+...
 ```
 
-**打完这一屏串口就安静了 —— 之后板载 LED 就是心跳**（红/绿/蓝每 1 秒轮换）。
+**之后每 5 秒一行 `[app] alive N s`**（想彻底安静就把 `main.c` 的 `HEARTBEAT_MS` 改成 `0`，
+那时开机只打一屏、靠板载 LED 看活着）。LED 本身也是心跳：红/绿/蓝每 1 秒轮换。
+
+> 🚨 **别把"开机那屏丢了"当成"跳进 App 就死了"**（本项目真发生过）：
+> 那块横幅是**一次性**的，而它正好落在「跳转/复位让 USB-Serial/JTAG 重新枚举」的窗口里 ——
+> 串口助手经常整屏错过。心跳就是为这件事留的：终端一旦接上，5 秒内必有输出。
+
 `布局自检: OK` 的判据（`main.c` 的 `layout_ok()`，四条全过才 OK）：
 
 | 判据 | 说明 |
@@ -236,5 +247,6 @@ CPU 主频本身由 bootloader 提到 320MHz，App 侧不用管。
 | `[app] image CRC mismatch` | flash `0x100000` 里的内容和描述符对不上（拖了一半 / 上一次的残留）→ 重新拖一次 |
 | App 跑飞 | **按住 GPIO0（J2-9 接 GND）上电**强制进 bootloader 模式，重新拖 |
 | 板载灯不亮 / 常亮白 / 颜色乱 | 看 `bsp/s31_rmt.c` 的三条硬结论；串口会打 `WS2812 发送失败 rc=` |
+| 跳到 App 后串口"什么都没有" | 开机那屏是一次性的，且落在 USB 重新枚举的窗口里，很容易整屏错过 —— 等 5 秒等心跳；想更稳就把 `HEARTBEAT_MS` 调小 |
 | 编译时守门检查报错 | `linker.ld` 里 `.image` 被拆开了，或者引入了新的输出段 —— 见上面"唯一的硬约束" |
 | `[mmu] ...` 没出现 | bootloader 太老，是改这一版之前的固件 |
